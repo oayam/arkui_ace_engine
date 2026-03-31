@@ -528,6 +528,22 @@ void NavDestinationModelStatic::SetHideToolBar(FrameNode* frameNode, bool hideTo
     navDestinationLayoutProperty->UpdateIsAnimatedToolBar(animated);
 }
 
+void NavDestinationModelStatic::SetFullScreenOverlay(FrameNode* frameNode, bool fullScreenOverlay)
+{
+    CHECK_NULL_VOID(frameNode);
+    auto navDestinationGroupNode = AceType::DynamicCast<NavDestinationGroupNode>(frameNode);
+    CHECK_NULL_VOID(navDestinationGroupNode);
+    auto navDestinationLayoutProperty = navDestinationGroupNode->GetLayoutPropertyPtr<NavDestinationLayoutProperty>();
+    CHECK_NULL_VOID(navDestinationLayoutProperty);
+    // Static-stack updates share the same runtime path as NG updates so dynamic toggles and
+    // rebuilt nodes stay consistent about container remounting and inherited overlay state.
+    auto previousRequest = navDestinationLayoutProperty->GetFullScreenOverlayValue(false);
+    navDestinationLayoutProperty->UpdateFullScreenOverlay(fullScreenOverlay);
+    auto navDestinationPattern = navDestinationGroupNode->GetPattern<NavDestinationPattern>();
+    CHECK_NULL_VOID(navDestinationPattern);
+    navDestinationPattern->NotifyFullScreenOverlayRequestChange(previousRequest, fullScreenOverlay);
+}
+
 void NavDestinationModelStatic::SetIgnoreLayoutSafeArea(FrameNode* frameNode, const NG::IgnoreLayoutSafeAreaOpts& opts)
 {
     auto navDestination = AceType::DynamicCast<NavDestinationGroupNode>(frameNode);

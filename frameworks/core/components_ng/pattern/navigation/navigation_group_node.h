@@ -149,6 +149,16 @@ public:
         return contentNode_;
     }
 
+    void SetOverlayNode(const RefPtr<UINode>& overlayNode)
+    {
+        overlayNode_ = overlayNode;
+    }
+
+    const RefPtr<UINode>& GetOverlayNode() const
+    {
+        return overlayNode_;
+    }
+
     void SetDividerNode(const RefPtr<UINode>& dividerNode)
     {
         dividerNode_ = dividerNode;
@@ -270,12 +280,14 @@ public:
         bool isTransitionIn);
 
     void InitPopPreList(const RefPtr<FrameNode>& preNode, std::vector<WeakPtr<FrameNode>>& preNavList,
-        const std::vector<WeakPtr<FrameNode>>& curNavList);
+        const std::vector<WeakPtr<FrameNode>>& curNavList, bool onlyHandleCurrentOverlay = false);
     void InitPopCurList(const RefPtr<FrameNode>& curNode, std::vector<WeakPtr<FrameNode>>& curNavList,
-        bool isNavbarNeedAnimation);
+        bool isNavbarNeedAnimation, bool skipUnderlyingAnimation = false);
     void InitPushPreList(const RefPtr<FrameNode>& preNode, std::vector<WeakPtr<FrameNode>>& prevNavList,
-        const std::vector<WeakPtr<FrameNode>>& curNavList, bool isNavbarNeedAnimation);
-    void InitPushCurList(const RefPtr<FrameNode>& curNode, std::vector<WeakPtr<FrameNode>>& curNavList);
+        const std::vector<WeakPtr<FrameNode>>& curNavList, bool isNavbarNeedAnimation,
+        bool skipUnderlyingAnimation = false);
+    void InitPushCurList(const RefPtr<FrameNode>& curNode, std::vector<WeakPtr<FrameNode>>& curNavList,
+        bool onlyHandleCurrentOverlay = false);
 
     std::vector<WeakPtr<NavDestinationGroupNode>> FindNodesPoped(const RefPtr<FrameNode>& preNode,
         const RefPtr<FrameNode>& curNode);
@@ -398,7 +410,7 @@ private:
         const RefPtr<UINode>& preLastStandardNode);
     bool ReorderNavDestination(
         const std::vector<std::pair<std::string, RefPtr<UINode>>>& navDestinationNodes,
-        RefPtr<FrameNode>& navigationContentNode, int32_t& slot, bool& hasChanged);
+        RefPtr<FrameNode>& navigationContentNode, int32_t& slot, int32_t& overlaySlot, bool& hasChanged);
     void RemoveRedundantNavDestination(RefPtr<FrameNode>& navigationContentNode,
         const RefPtr<UINode>& remainChild, int32_t slot, bool& hasChanged,
         const RefPtr<NavDestinationGroupNode>& preLastStandardNode);
@@ -434,6 +446,7 @@ private:
     RefPtr<UINode> customHomeDestination_;
     RefPtr<UINode> navBarNode_;
     RefPtr<UINode> contentNode_;
+    RefPtr<UINode> overlayNode_;
     RefPtr<UINode> dividerNode_;
     RefPtr<UINode> dragBarNode_;
     bool isStaticPlaceholder_ = false;
@@ -444,6 +457,11 @@ private:
     std::vector<std::pair<RefPtr<NavDestinationGroupNode>, bool>> hideNodes_;
     std::vector<RefPtr<NavDestinationGroupNode>> showNodes_;
     int32_t lastStandardIndex_ = -1;
+    // content/overlay containers maintain separate "last standard page" markers so visibility,
+    // cleanup, and transition list building can treat covered split content and overlay stacks independently.
+    int32_t contentLastStandardIndex_ = -1;
+    int32_t overlayStartIndex_ = -1;
+    int32_t overlayLastStandardIndex_ = -1;
     std::atomic_int32_t animationId_ = 0;
     std::atomic_int32_t modeSwitchAnimationCnt_ = 0;
     bool isOnAnimation_ { false };
@@ -455,6 +473,10 @@ private:
     std::string navigationPathInfo_;
     std::string navigationModuleName_;
     int32_t preLastStandardIndex_ = -1;
+    // Previous-frame snapshots are used when transitions compare old and new top-standard pages
+    // across the two containers after a fullscreen-overlay toggle or stack mutation.
+    int32_t preContentLastStandardIndex_ = -1;
+    int32_t preOverlayLastStandardIndex_ = -1;
 
     //-------for force split------- begin------
     std::vector<RefPtr<NavDestinationGroupNode>> primaryNodesToBeRemoved_;

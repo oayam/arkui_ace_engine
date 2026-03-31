@@ -22182,6 +22182,11 @@ class ArkNavDestinationComponent extends ArkComponent {
       NavDestinationHideBackButtonModifier, value);
     return this;
   }
+  fullScreenOverlay(value) {
+    modifierWithKey(this._modifiersWithKeys, NavDestinationFullScreenOverlayModifier.identity,
+      NavDestinationFullScreenOverlayModifier, value);
+    return this;
+  }
   backButtonIcon(value, text) {
     let config = new ArkNavBackButton();
     config.icon = value;
@@ -22406,6 +22411,21 @@ class NavDestinationHideBackButtonModifier extends ModifierWithKey {
   }
 }
 NavDestinationHideBackButtonModifier.identity = Symbol('hideBackButton');
+
+class NavDestinationFullScreenOverlayModifier extends ModifierWithKey {
+  constructor(value) {
+    super(value);
+  }
+  applyPeer(node, reset) {
+    if (reset) {
+      getUINativeModule().navDestination.resetFullScreenOverlay(node);
+    }
+    else {
+      getUINativeModule().navDestination.setFullScreenOverlay(node, this.value);
+    }
+  }
+}
+NavDestinationFullScreenOverlayModifier.identity = Symbol('fullScreenOverlay');
 
 class IgnoreLayoutSafeAreaModifier extends ModifierWithKey {
   constructor(value) {

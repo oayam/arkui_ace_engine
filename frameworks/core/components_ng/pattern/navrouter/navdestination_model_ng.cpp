@@ -1572,6 +1572,12 @@ void NavDestinationModelNG::SetHideToolBar(bool hideToolBar, bool animated)
     navDestinationLayoutProperty->UpdateIsAnimatedToolBar(animated);
 }
 
+void NavDestinationModelNG::SetFullScreenOverlay(bool fullScreenOverlay)
+{
+    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
+    SetFullScreenOverlay(frameNode, fullScreenOverlay);
+}
+
 void NavDestinationModelNG::SetHideToolBar(FrameNode* frameNode, bool hideToolBar, bool animated)
 {
     CHECK_NULL_VOID(frameNode);
@@ -1581,6 +1587,22 @@ void NavDestinationModelNG::SetHideToolBar(FrameNode* frameNode, bool hideToolBa
     CHECK_NULL_VOID(navDestinationLayoutProperty);
     navDestinationLayoutProperty->UpdateHideToolBar(hideToolBar);
     navDestinationLayoutProperty->UpdateIsAnimatedToolBar(animated);
+}
+
+void NavDestinationModelNG::SetFullScreenOverlay(FrameNode* frameNode, bool fullScreenOverlay)
+{
+    CHECK_NULL_VOID(frameNode);
+    auto navDestinationGroupNode = AceType::DynamicCast<NavDestinationGroupNode>(frameNode);
+    CHECK_NULL_VOID(navDestinationGroupNode);
+    auto navDestinationLayoutProperty = navDestinationGroupNode->GetLayoutPropertyPtr<NavDestinationLayoutProperty>();
+    CHECK_NULL_VOID(navDestinationLayoutProperty);
+    // Persist the request on the destination itself, then notify Navigation so it can recompute
+    // inherited overlay state and remount pages between content/overlay containers immediately.
+    auto previousRequest = navDestinationLayoutProperty->GetFullScreenOverlayValue(false);
+    navDestinationLayoutProperty->UpdateFullScreenOverlay(fullScreenOverlay);
+    auto navDestinationPattern = navDestinationGroupNode->GetPattern<NavDestinationPattern>();
+    CHECK_NULL_VOID(navDestinationPattern);
+    navDestinationPattern->NotifyFullScreenOverlayRequestChange(previousRequest, fullScreenOverlay);
 }
 
 void NavDestinationModelNG::SetToolbarConfiguration(std::vector<NG::BarItem>&& toolBarItems, MoreButtonOptions&& opt)

@@ -345,6 +345,32 @@ ArkUINativeModuleValue NavDestinationBridge::ResetHideBackButton(ArkUIRuntimeCal
     return panda::JSValueRef::Undefined(vm);
 }
 
+ArkUINativeModuleValue NavDestinationBridge::SetFullScreenOverlay(ArkUIRuntimeCallInfo* runtimeCallInfo)
+{
+    EcmaVM* vm = runtimeCallInfo->GetVM();
+    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
+    Local<JSValueRef> nodeArg = runtimeCallInfo->GetCallArgRef(0);
+    Local<JSValueRef> valueArg = runtimeCallInfo->GetCallArgRef(1);
+    auto nativeNode = nodePtr(nodeArg->ToNativePointer(vm)->Value());
+    if (valueArg->IsBoolean()) {
+        GetArkUINodeModifiers()->getNavDestinationModifier()->setFullScreenOverlay(
+            nativeNode, valueArg->ToBoolean(vm)->Value());
+    } else {
+        GetArkUINodeModifiers()->getNavDestinationModifier()->resetFullScreenOverlay(nativeNode);
+    }
+    return panda::JSValueRef::Undefined(vm);
+}
+
+ArkUINativeModuleValue NavDestinationBridge::ResetFullScreenOverlay(ArkUIRuntimeCallInfo* runtimeCallInfo)
+{
+    EcmaVM* vm = runtimeCallInfo->GetVM();
+    CHECK_NULL_RETURN(vm, panda::NativePointerRef::New(vm, nullptr));
+    Local<JSValueRef> firstArg = runtimeCallInfo->GetCallArgRef(0);
+    auto nativeNode = nodePtr(firstArg->ToNativePointer(vm)->Value());
+    GetArkUINodeModifiers()->getNavDestinationModifier()->resetFullScreenOverlay(nativeNode);
+    return panda::JSValueRef::Undefined(vm);
+}
+
 ArkUINativeModuleValue NavDestinationBridge::ResetBackButtonIcon(ArkUIRuntimeCallInfo* runtimeCallInfo)
 {
     EcmaVM* vm = runtimeCallInfo->GetVM();

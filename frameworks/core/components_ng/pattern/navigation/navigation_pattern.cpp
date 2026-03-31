@@ -2279,7 +2279,11 @@ void NavigationPattern::StartDefaultAnimation(const RefPtr<NavDestinationGroupNo
     }
     // navBar or HomeDestination push navDestination in split mode
     if (newTopNavDestination && !preTopNavDestination && (navigationMode_ == NavigationMode::SPLIT)) {
-        ContentChangeReport(newTopNavDestination);
+        if (newTopNavDestination->IsFullScreenOverlay()) {
+            navigationNode->TransitionWithPush(navBarOrHomeDestNode, newTopNavDestination, true);
+        } else {
+            ContentChangeReport(newTopNavDestination);
+        }
     }
 }
 

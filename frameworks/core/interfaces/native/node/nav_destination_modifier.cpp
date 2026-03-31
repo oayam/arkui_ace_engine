@@ -62,6 +62,20 @@ void ResetNavDestinationHideBackButton(ArkUINodeHandle node)
     NavDestinationModelNG::SetHideBackButton(frameNode, false);
 }
 
+void SetFullScreenOverlay(ArkUINodeHandle node, ArkUI_Bool fullScreenOverlay)
+{
+    auto* frameNode = reinterpret_cast<FrameNode*>(node);
+    CHECK_NULL_VOID(frameNode);
+    NavDestinationModelNG::SetFullScreenOverlay(frameNode, fullScreenOverlay);
+}
+
+void ResetFullScreenOverlay(ArkUINodeHandle node)
+{
+    auto* frameNode = reinterpret_cast<FrameNode*>(node);
+    CHECK_NULL_VOID(frameNode);
+    NavDestinationModelNG::SetFullScreenOverlay(frameNode, false);
+}
+
 void SetNavDestinationBackgroundColor(ArkUINodeHandle node, uint32_t color, void* bgColorRawPtr)
 {
     auto* frameNode = reinterpret_cast<FrameNode*>(node);
@@ -977,6 +991,8 @@ const ArkUINavDestinationModifier* GetNavDestinationModifier()
         .resetNavDestinationHideToolBar = ResetNavDestinationHideToolBar,
         .setNavDestinationHideBackButton = SetNavDestinationHideBackButton,
         .resetNavDestinationHideBackButton = ResetNavDestinationHideBackButton,
+        .setFullScreenOverlay = SetFullScreenOverlay,
+        .resetFullScreenOverlay = ResetFullScreenOverlay,
         .setNavDestinationMode = SetNavDestinationMode,
         .resetNavDestinationMode = ResetNavDestinationMode,
         .setIgnoreLayoutSafeArea = SetIgnoreLayoutSafeArea,

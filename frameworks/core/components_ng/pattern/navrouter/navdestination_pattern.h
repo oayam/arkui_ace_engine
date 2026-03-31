@@ -68,6 +68,8 @@ public:
 
     void OnModifyDone() override;
 
+    void NotifyFullScreenOverlayRequestChange(bool previousRequest, bool currentRequest);
+
     const RefPtr<ShallowBuilder>& GetShallowBuilder() const
     {
         return shallowBuilder_;

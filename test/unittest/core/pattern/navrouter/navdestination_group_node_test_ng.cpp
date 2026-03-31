@@ -701,6 +701,30 @@ HWTEST_F(NavDestinationGroupNodeTestNg, DoTransitionTest002, TestSize.Level1)
 }
 
 /**
+ * @tc.name: DoTransitionTest005
+ * @tc.desc: Branch: if systemTransitionType is DEFAULT and navDestination is fullScreenOverlay
+ *           Expect: use overlay default slide transition and return animationId
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavDestinationGroupNodeTestNg, DoTransitionTest005, TestSize.Level1)
+{
+    NavDestinationModelNG navdestinationModel;
+    navdestinationModel.Create();
+    auto frameNode = ViewStackProcessor::GetInstance()->GetMainFrameNode();
+    ASSERT_NE(frameNode, nullptr);
+    auto navDestination = AceType::DynamicCast<NavDestinationGroupNode>(Referenced::Claim<FrameNode>(frameNode));
+    ASSERT_NE(navDestination, nullptr);
+    auto navigationNode = CreateNavigationNode(AceType::MakeRefPtr<MockNavigationStack>());
+    ASSERT_EQ(navigationNode->animationId_, 0);
+    SetNavigationToNavDestination(navDestination, navigationNode);
+    navDestination->SetIsFullScreenOverlay(true);
+
+    ASSERT_NE(navDestination->DoTransition(NavigationOperation::PUSH, true), INVALID_ANIMATION_ID);
+    ASSERT_NE(navDestination->DoTransition(NavigationOperation::POP, false), INVALID_ANIMATION_ID);
+    ASSERT_EQ(navigationNode->animationId_, 2);
+}
+
+/**
  * @tc.name: DoTransitionTest003
  * @tc.desc: Branch: if navDestinationTransitionDelegate_ != nullptr && navDestinationTransitionDelegate return array
  *           Expect: do custom transition accordingly and return animationId

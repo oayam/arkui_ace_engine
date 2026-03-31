@@ -67,6 +67,78 @@ void NavigationGroupNodeTestNg::TearDownTestCase()
 }
 
 /*
+ * @tc.name: DynamicFullScreenOverlayRequest001
+ * @tc.desc: Verify declarative fullScreenOverlay updates remount destinations between content and overlay containers.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavigationGroupNodeTestNg, DynamicFullScreenOverlayRequest001, TestSize.Level1)
+{
+    auto mockNavPathStack = AceType::MakeRefPtr<MockNavigationStack>();
+    NavigationModelNG navigationModel;
+    navigationModel.Create();
+    navigationModel.SetNavigationStack(mockNavPathStack);
+    auto navigation = AceType::DynamicCast<NavigationGroupNode>(ViewStackProcessor::GetInstance()->Finish());
+    ASSERT_NE(navigation, nullptr);
+    auto navigationPattern = navigation->GetPattern<NavigationPattern>();
+    ASSERT_NE(navigationPattern, nullptr);
+
+    mockNavPathStack->MockPushPath(AceType::MakeRefPtr<MockNavPathInfo>("pageA"));
+    mockNavPathStack->MockPushPath(AceType::MakeRefPtr<MockNavPathInfo>("pageB"));
+    MockContainer::Current()->SetNavigationRoute(AceType::MakeRefPtr<MockNavigationRoute>(""));
+    RunNavigationStackSync(navigationPattern);
+
+    auto contentNode = AceType::DynamicCast<FrameNode>(navigation->GetContentNode());
+    auto overlayNode = AceType::DynamicCast<FrameNode>(navigation->GetOverlayNode());
+    ASSERT_NE(contentNode, nullptr);
+    ASSERT_NE(overlayNode, nullptr);
+    ASSERT_EQ(static_cast<int32_t>(contentNode->GetChildren().size()), 2);
+    ASSERT_EQ(static_cast<int32_t>(overlayNode->GetChildren().size()), 0);
+
+    auto pageA = AceType::DynamicCast<NavDestinationGroupNode>(contentNode->GetChildAtIndex(0));
+    auto pageB = AceType::DynamicCast<NavDestinationGroupNode>(contentNode->GetChildAtIndex(1));
+    ASSERT_NE(pageA, nullptr);
+    ASSERT_NE(pageB, nullptr);
+
+    NavDestinationModelNG::SetFullScreenOverlay(AceType::RawPtr(pageA), true);
+    EXPECT_TRUE(pageA->IsFullScreenOverlay());
+    EXPECT_TRUE(pageB->IsFullScreenOverlay());
+    EXPECT_EQ(static_cast<int32_t>(contentNode->GetChildren().size()), 0);
+    EXPECT_EQ(static_cast<int32_t>(overlayNode->GetChildren().size()), 2);
+    EXPECT_EQ(AceType::DynamicCast<NavDestinationGroupNode>(overlayNode->GetChildAtIndex(0)), pageA);
+    EXPECT_EQ(AceType::DynamicCast<NavDestinationGroupNode>(overlayNode->GetChildAtIndex(1)), pageB);
+
+    NavDestinationModelStatic::SetFullScreenOverlay(AceType::RawPtr(pageA), false);
+    EXPECT_FALSE(pageA->IsFullScreenOverlay());
+    EXPECT_FALSE(pageB->IsFullScreenOverlay());
+    EXPECT_EQ(static_cast<int32_t>(contentNode->GetChildren().size()), 2);
+    EXPECT_EQ(static_cast<int32_t>(overlayNode->GetChildren().size()), 0);
+    EXPECT_EQ(AceType::DynamicCast<NavDestinationGroupNode>(contentNode->GetChildAtIndex(0)), pageA);
+    EXPECT_EQ(AceType::DynamicCast<NavDestinationGroupNode>(contentNode->GetChildAtIndex(1)), pageB);
+}
+
+/*
+ * @tc.name: FullScreenOverlayLayerOrder001
+ * @tc.desc: Verify the overlay container stays above divider chrome.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavigationGroupNodeTestNg, FullScreenOverlayLayerOrder001, TestSize.Level1)
+{
+    NavigationModelNG navigationModel;
+    navigationModel.Create();
+    auto navigation = AceType::DynamicCast<NavigationGroupNode>(ViewStackProcessor::GetInstance()->Finish());
+    ASSERT_NE(navigation, nullptr);
+
+    auto overlayNode = AceType::DynamicCast<FrameNode>(navigation->GetOverlayNode());
+    auto dividerNode = AceType::DynamicCast<FrameNode>(navigation->GetDividerNode());
+    ASSERT_NE(overlayNode, nullptr);
+    ASSERT_NE(dividerNode, nullptr);
+    ASSERT_NE(overlayNode->GetRenderContext(), nullptr);
+    ASSERT_NE(dividerNode->GetRenderContext(), nullptr);
+
+    EXPECT_GT(overlayNode->GetRenderContext()->GetZIndexValue(0), dividerNode->GetRenderContext()->GetZIndexValue(0));
+}
+
+/*
  * @tc.name: RemoveRedundantNavDestinationTest001
  * @tc.desc: Branch: slot == 0 && `no other extra flag set`
  *           Expect: all navDestination are deleted after RemoveRedundantNavDestination called.

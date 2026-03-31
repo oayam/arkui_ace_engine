@@ -55,6 +55,7 @@ void JSNavDestinationContext::GetPathInfo(const JSCallbackInfo& info)
     }
     obj->SetProperty<std::string>("name", pathInfo->GetName());
     obj->SetProperty<bool>("isEntry", pathInfo->GetIsEntry());
+    obj->SetProperty<bool>("fullScreenOverlay", pathInfo->IsFullScreenOverlay());
     auto jsInfo = AceType::DynamicCast<JSNavPathInfo>(pathInfo);
     JSRef<JSVal> param;
     JSRef<JSVal> onPop;
