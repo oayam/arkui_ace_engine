@@ -269,7 +269,8 @@ bool NavigationGroupNode::ReorderNavDestination(
         auto targetParent = navDestination->IsFullScreenOverlay() ? overlayNode : navigationContentNode;
         CHECK_NULL_RETURN(targetParent, false);
         auto currentParent = AceType::DynamicCast<FrameNode>(navDestination->GetParent());
-        bool useSilentRemount = navDestination->IsFullScreenOverlay() || currentParent == overlayNode;
+        bool useSilentRemount = currentParent && currentParent != targetParent &&
+            (navDestination->IsFullScreenOverlay() || currentParent == overlayNode);
         if (currentParent && currentParent != targetParent) {
             if (useSilentRemount) {
                 // Dynamic fullScreenOverlay updates only remount the node between content and
@@ -1506,7 +1507,9 @@ void NavigationGroupNode::UpdateLastStandardIndex()
             continue;
         }
         auto navDestinationNode = AceType::DynamicCast<NavDestinationGroupNode>(GetNavDestinationNode(uiNode));
-        CHECK_NULL_VOID(navDestinationNode);
+        if (!navDestinationNode) {
+            continue;
+        }
         auto isFullScreenOverlay = inheritedOverlay || navDestinationNode->HasFullScreenOverlayRequest();
         navDestinationNode->SetIsFullScreenOverlay(isFullScreenOverlay);
         if (isFullScreenOverlay) {

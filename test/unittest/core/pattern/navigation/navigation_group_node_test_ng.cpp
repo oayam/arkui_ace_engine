@@ -117,6 +117,43 @@ HWTEST_F(NavigationGroupNodeTestNg, DynamicFullScreenOverlayRequest001, TestSize
 }
 
 /*
+ * @tc.name: FullScreenOverlayFirstMountAttach001
+ * @tc.desc: Verify a newly inserted overlay destination is mounted with normal attach semantics.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavigationGroupNodeTestNg, FullScreenOverlayFirstMountAttach001, TestSize.Level1)
+{
+    auto mockNavPathStack = AceType::MakeRefPtr<MockNavigationStack>();
+    NavigationModelNG navigationModel;
+    navigationModel.Create();
+    navigationModel.SetNavigationStack(mockNavPathStack);
+    auto navigation = AceType::DynamicCast<NavigationGroupNode>(ViewStackProcessor::GetInstance()->Finish());
+    ASSERT_NE(navigation, nullptr);
+    navigation->AttachToMainTree();
+
+    auto overlayDestination = NavDestinationGroupNode::GetOrCreateGroupNode(V2::NAVDESTINATION_VIEW_ETS_TAG,
+        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<NavDestinationPattern>(); });
+    ASSERT_NE(overlayDestination, nullptr);
+    overlayDestination->SetNavDestinationMode(NavDestinationMode::STANDARD);
+    auto layoutProperty = overlayDestination->GetLayoutProperty<NavDestinationLayoutProperty>();
+    ASSERT_NE(layoutProperty, nullptr);
+    layoutProperty->UpdateFullScreenOverlay(true);
+
+    auto navigationPattern = navigation->GetPattern<NavigationPattern>();
+    ASSERT_NE(navigationPattern, nullptr);
+    auto stack = navigationPattern->GetNavigationStack();
+    ASSERT_NE(stack, nullptr);
+    stack->Add("overlay", overlayDestination);
+
+    navigation->UpdateNavDestinationNodeWithoutMarkDirty(nullptr);
+
+    auto overlayNode = AceType::DynamicCast<FrameNode>(navigation->GetOverlayNode());
+    ASSERT_NE(overlayNode, nullptr);
+    EXPECT_EQ(overlayDestination->GetParent(), overlayNode);
+    EXPECT_TRUE(overlayDestination->IsOnMainTree());
+}
+
+/*
  * @tc.name: FullScreenOverlayLayerOrder001
  * @tc.desc: Verify the overlay container stays above divider chrome.
  * @tc.type: FUNC
@@ -1305,6 +1342,53 @@ HWTEST_F(NavigationGroupNodeTestNg, UpdateLastStandardIndexTest001, TestSize.Lev
 
     navigation->UpdateLastStandardIndex();
     EXPECT_EQ(navigation->GetLastStandardIndex(), 0);
+    NavigationGroupNodeTestNg::TearDownTestCase();
+}
+
+/*
+ * @tc.name: UpdateLastStandardIndexTest002
+ * @tc.desc: Verify index recomputation skips non-destination holes and continues scanning.
+ * @tc.type: FUNC
+ */
+HWTEST_F(NavigationGroupNodeTestNg, UpdateLastStandardIndexTest002, TestSize.Level1)
+{
+    NavigationGroupNodeTestNg::SetUpTestCase();
+    auto mockNavPathStack = AceType::MakeRefPtr<MockNavigationStack>();
+    NavigationModelNG navigationModel;
+    navigationModel.Create();
+    navigationModel.SetNavigationStack(mockNavPathStack);
+    auto navigation = AceType::DynamicCast<NavigationGroupNode>(ViewStackProcessor::GetInstance()->Finish());
+    ASSERT_NE(navigation, nullptr);
+    auto navigationPattern = navigation->GetPattern<NavigationPattern>();
+    ASSERT_NE(navigationPattern, nullptr);
+
+    auto standardDestination = NavDestinationGroupNode::GetOrCreateGroupNode(V2::NAVDESTINATION_VIEW_ETS_TAG,
+        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<NavDestinationPattern>(); });
+    ASSERT_NE(standardDestination, nullptr);
+    standardDestination->SetNavDestinationMode(NavDestinationMode::STANDARD);
+
+    auto holeNode = FrameNode::GetOrCreateFrameNode(V2::TEXT_ETS_TAG, ElementRegister::GetInstance()->MakeUniqueId(),
+        []() { return AceType::MakeRefPtr<TextPattern>(); });
+    ASSERT_NE(holeNode, nullptr);
+
+    auto overlayDestination = NavDestinationGroupNode::GetOrCreateGroupNode(V2::NAVDESTINATION_VIEW_ETS_TAG,
+        ElementRegister::GetInstance()->MakeUniqueId(), []() { return AceType::MakeRefPtr<NavDestinationPattern>(); });
+    ASSERT_NE(overlayDestination, nullptr);
+    overlayDestination->SetNavDestinationMode(NavDestinationMode::STANDARD);
+    auto overlayLayoutProperty = overlayDestination->GetLayoutProperty<NavDestinationLayoutProperty>();
+    ASSERT_NE(overlayLayoutProperty, nullptr);
+    overlayLayoutProperty->UpdateFullScreenOverlay(true);
+
+    auto stack = navigationPattern->GetNavigationStack();
+    ASSERT_NE(stack, nullptr);
+    stack->Add("pageA", standardDestination);
+    stack->Add("hole", holeNode);
+    stack->Add("pageB", overlayDestination);
+
+    navigation->UpdateLastStandardIndex();
+
+    EXPECT_EQ(navigation->GetLastStandardIndex(), 2);
+    EXPECT_TRUE(overlayDestination->IsFullScreenOverlay());
     NavigationGroupNodeTestNg::TearDownTestCase();
 }
 
