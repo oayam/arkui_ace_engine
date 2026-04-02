@@ -29,6 +29,7 @@
 #include "core/components_ng/pattern/navigation/navigation_pattern.h"
 #include "core/components_ng/pattern/navigation/title_bar_pattern.h"
 #include "core/components_ng/pattern/navrouter/navdestination_model_ng.h"
+#include "core/components_ng/pattern/navrouter/navdestination_model_static.h"
 #include "core/components_ng/pattern/stage/stage_pattern.h"
 #include "core/components_ng/pattern/text/text_pattern.h"
 
@@ -88,11 +89,9 @@ HWTEST_F(NavigationGroupNodeTestNg, DynamicFullScreenOverlayRequest001, TestSize
     RunNavigationStackSync(navigationPattern);
 
     auto contentNode = AceType::DynamicCast<FrameNode>(navigation->GetContentNode());
-    auto overlayNode = AceType::DynamicCast<FrameNode>(navigation->GetOverlayNode());
     ASSERT_NE(contentNode, nullptr);
-    ASSERT_NE(overlayNode, nullptr);
+    ASSERT_EQ(navigation->GetOverlayNode(), nullptr);
     ASSERT_EQ(static_cast<int32_t>(contentNode->GetChildren().size()), 2);
-    ASSERT_EQ(static_cast<int32_t>(overlayNode->GetChildren().size()), 0);
 
     auto pageA = AceType::DynamicCast<NavDestinationGroupNode>(contentNode->GetChildAtIndex(0));
     auto pageB = AceType::DynamicCast<NavDestinationGroupNode>(contentNode->GetChildAtIndex(1));
@@ -100,10 +99,13 @@ HWTEST_F(NavigationGroupNodeTestNg, DynamicFullScreenOverlayRequest001, TestSize
     ASSERT_NE(pageB, nullptr);
 
     NavDestinationModelNG::SetFullScreenOverlay(AceType::RawPtr(pageA), true);
+    auto overlayNode = AceType::DynamicCast<FrameNode>(navigation->GetOverlayNode());
+    ASSERT_NE(overlayNode, nullptr);
     EXPECT_TRUE(pageA->IsFullScreenOverlay());
     EXPECT_TRUE(pageB->IsFullScreenOverlay());
     EXPECT_EQ(static_cast<int32_t>(contentNode->GetChildren().size()), 0);
     EXPECT_EQ(static_cast<int32_t>(overlayNode->GetChildren().size()), 2);
+    EXPECT_EQ(overlayNode->GetLayoutProperty()->GetVisibilityValue(VisibleType::GONE), VisibleType::VISIBLE);
     EXPECT_EQ(AceType::DynamicCast<NavDestinationGroupNode>(overlayNode->GetChildAtIndex(0)), pageA);
     EXPECT_EQ(AceType::DynamicCast<NavDestinationGroupNode>(overlayNode->GetChildAtIndex(1)), pageB);
 
@@ -112,6 +114,7 @@ HWTEST_F(NavigationGroupNodeTestNg, DynamicFullScreenOverlayRequest001, TestSize
     EXPECT_FALSE(pageB->IsFullScreenOverlay());
     EXPECT_EQ(static_cast<int32_t>(contentNode->GetChildren().size()), 2);
     EXPECT_EQ(static_cast<int32_t>(overlayNode->GetChildren().size()), 0);
+    EXPECT_EQ(overlayNode->GetLayoutProperty()->GetVisibilityValue(VisibleType::VISIBLE), VisibleType::GONE);
     EXPECT_EQ(AceType::DynamicCast<NavDestinationGroupNode>(contentNode->GetChildAtIndex(0)), pageA);
     EXPECT_EQ(AceType::DynamicCast<NavDestinationGroupNode>(contentNode->GetChildAtIndex(1)), pageB);
 }
@@ -143,6 +146,7 @@ HWTEST_F(NavigationGroupNodeTestNg, FullScreenOverlayFirstMountAttach001, TestSi
     ASSERT_NE(navigationPattern, nullptr);
     auto stack = navigationPattern->GetNavigationStack();
     ASSERT_NE(stack, nullptr);
+    ASSERT_EQ(navigation->GetOverlayNode(), nullptr);
     stack->Add("overlay", overlayDestination);
 
     navigation->UpdateNavDestinationNodeWithoutMarkDirty(nullptr);
@@ -165,7 +169,7 @@ HWTEST_F(NavigationGroupNodeTestNg, FullScreenOverlayLayerOrder001, TestSize.Lev
     auto navigation = AceType::DynamicCast<NavigationGroupNode>(ViewStackProcessor::GetInstance()->Finish());
     ASSERT_NE(navigation, nullptr);
 
-    auto overlayNode = AceType::DynamicCast<FrameNode>(navigation->GetOverlayNode());
+    auto overlayNode = navigation->GetOrCreateOverlayNode();
     auto dividerNode = AceType::DynamicCast<FrameNode>(navigation->GetDividerNode());
     ASSERT_NE(overlayNode, nullptr);
     ASSERT_NE(dividerNode, nullptr);

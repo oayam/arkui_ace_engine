@@ -158,6 +158,8 @@ public:
     {
         return overlayNode_;
     }
+    RefPtr<FrameNode> GetOrCreateOverlayNode();
+    bool UpdateOverlayNodeVisibility();
 
     void SetDividerNode(const RefPtr<UINode>& dividerNode)
     {

@@ -326,20 +326,13 @@ RefPtr<FrameNode> NavigationModelStatic::CreateFrameNode(int32_t nodeId)
         navigationGroupNode->SetContentNode(contentNode);
     }
 
-    if (!navigationGroupNode->GetOverlayNode()) {
-        int32_t overlayNodeId = ElementRegister::GetInstance()->MakeUniqueId();
-        auto overlayNode = FrameNode::GetOrCreateFrameNode(V2::NAVIGATION_FULL_SCREEN_OVERLAY_ETS_TAG, overlayNodeId,
-            []() { return AceType::MakeRefPtr<NavigationContentPattern>(); });
-        overlayNode->GetLayoutProperty()->UpdateAlignment(Alignment::TOP_LEFT);
-        navigationGroupNode->AddChild(overlayNode);
-        navigationGroupNode->SetOverlayNode(overlayNode);
-    }
     auto overlayNode = AceType::DynamicCast<FrameNode>(navigationGroupNode->GetOverlayNode());
-    CHECK_NULL_RETURN(overlayNode, nullptr);
-    auto overlayRenderContext = overlayNode->GetRenderContext();
-    CHECK_NULL_RETURN(overlayRenderContext, nullptr);
-    // Keep overlay pages above structural chrome such as the divider and drag bar.
-    overlayRenderContext->UpdateZIndex(NAVIGATION_OVERLAY_ZINDEX);
+    if (overlayNode) {
+        auto overlayRenderContext = overlayNode->GetRenderContext();
+        CHECK_NULL_RETURN(overlayRenderContext, nullptr);
+        // Keep overlay pages above structural chrome such as the divider and drag bar.
+        overlayRenderContext->UpdateZIndex(NAVIGATION_OVERLAY_ZINDEX);
+    }
 
     // divider node
     if (!navigationGroupNode->GetDividerNode()) {

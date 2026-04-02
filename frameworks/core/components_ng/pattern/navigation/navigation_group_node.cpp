@@ -27,11 +27,13 @@
 #include "core/components_ng/pattern/linear_layout/linear_layout_pattern.h"
 #include "core/components_ng/pattern/navigation/nav_bar_node.h"
 #include "core/components_ng/pattern/navigation/nav_bar_layout_property.h"
+#include "core/components_ng/pattern/navigation/navigation_content_pattern.h"
 #include "core/components_ng/pattern/navigation/navigation_declaration.h"
 #include "core/components_ng/pattern/navigation/navigation_pattern.h"
 #include "core/components_ng/pattern/navigation/navigation_title_util.h"
 #include "core/components_ng/pattern/navigation/navdestination_pattern_base.h"
 #include "core/components_ng/manager/content_change_manager/content_change_manager.h"
+#include "core/pipeline/base/element_register.h"
 #include "interfaces/inner_api/ui_session/ui_session_manager.h"
 
 namespace OHOS::Ace::NG {
@@ -41,6 +43,7 @@ constexpr int32_t DEFAULT_ANIMATION_DURATION = 450;
 constexpr int32_t DEFAULT_REPLACE_DURATION = 150;
 constexpr int32_t INVALID_ANIMATION_ID = -1;
 constexpr int32_t RELEASE_JSCHILD_DELAY_TIME = 50;
+constexpr int32_t NAVIGATION_OVERLAY_ZINDEX = 2;
 constexpr int32_t SOFT_DEFAULT_ANIMATION_DURATION = 400;
 constexpr int32_t SOFT_POP_ANIMATION_OPACITY_DURATION = 100;
 constexpr int32_t SOFT_PUSH_ANIMATION_OPACITY_DURATION = 150;
@@ -70,6 +73,49 @@ bool IsFullScreenOverlayNode(const RefPtr<FrameNode>& node)
 }
 } // namespace
 class InspectorFilter;
+
+RefPtr<FrameNode> NavigationGroupNode::GetOrCreateOverlayNode()
+{
+    auto overlayNode = AceType::DynamicCast<FrameNode>(overlayNode_);
+    if (overlayNode) {
+        return overlayNode;
+    }
+    int32_t overlayNodeId = ElementRegister::GetInstance()->MakeUniqueId();
+    ACE_LAYOUT_SCOPED_TRACE("Create[%s][self:%d]", V2::NAVIGATION_FULL_SCREEN_OVERLAY_ETS_TAG, overlayNodeId);
+    overlayNode = FrameNode::GetOrCreateFrameNode(V2::NAVIGATION_FULL_SCREEN_OVERLAY_ETS_TAG, overlayNodeId,
+        []() { return AceType::MakeRefPtr<NavigationContentPattern>(); });
+    CHECK_NULL_RETURN(overlayNode, nullptr);
+    auto overlayLayoutProperty = overlayNode->GetLayoutProperty();
+    CHECK_NULL_RETURN(overlayLayoutProperty, nullptr);
+    overlayLayoutProperty->UpdateAlignment(Alignment::TOP_LEFT);
+    overlayLayoutProperty->UpdateVisibility(VisibleType::GONE);
+    auto eventHub = overlayNode->GetEventHub<EventHub>();
+    CHECK_NULL_RETURN(eventHub, nullptr);
+    auto gestureEventHub = eventHub->GetOrCreateGestureEventHub();
+    CHECK_NULL_RETURN(gestureEventHub, nullptr);
+    gestureEventHub->SetHitTestMode(HitTestMode::HTMTRANSPARENT_SELF);
+    AddChild(overlayNode);
+    SetOverlayNode(overlayNode);
+    auto overlayRenderContext = overlayNode->GetRenderContext();
+    CHECK_NULL_RETURN(overlayRenderContext, overlayNode);
+    // Keep overlay pages above structural chrome such as the divider and drag bar.
+    overlayRenderContext->UpdateZIndex(NAVIGATION_OVERLAY_ZINDEX);
+    return overlayNode;
+}
+
+bool NavigationGroupNode::UpdateOverlayNodeVisibility()
+{
+    auto overlayNode = AceType::DynamicCast<FrameNode>(GetOverlayNode());
+    CHECK_NULL_RETURN(overlayNode, false);
+    auto overlayLayoutProperty = overlayNode->GetLayoutProperty();
+    CHECK_NULL_RETURN(overlayLayoutProperty, false);
+    auto targetVisibility = overlayNode->GetChildren().empty() ? VisibleType::GONE : VisibleType::VISIBLE;
+    if (overlayLayoutProperty->GetVisibilityValue(VisibleType::VISIBLE) == targetVisibility) {
+        return false;
+    }
+    overlayLayoutProperty->UpdateVisibility(targetVisibility);
+    return true;
+}
 
 void NavigationGroupNode::SetUseHomeDestinatoin(bool use)
 {
@@ -156,7 +202,6 @@ void NavigationGroupNode::UpdateNavDestinationNodeWithoutMarkDirty(const RefPtr<
     auto navigationContentNode = AceType::DynamicCast<FrameNode>(GetContentNode());
     CHECK_NULL_VOID(navigationContentNode);
     auto overlayNode = AceType::DynamicCast<FrameNode>(GetOverlayNode());
-    CHECK_NULL_VOID(overlayNode);
     bool hasChanged = false;
     int32_t slot = 0;
     int32_t overlaySlot = 0;
@@ -164,7 +209,7 @@ void NavigationGroupNode::UpdateNavDestinationNodeWithoutMarkDirty(const RefPtr<
     // the previous "last standard page" snapshot for both the content and overlay trees.
     auto getPreStandardNode = [pattern, this](int32_t index, const RefPtr<FrameNode>& container) {
         RefPtr<NavDestinationGroupNode> preStandardNode = nullptr;
-        if (index >= 0) {
+        if (container && index >= 0) {
             preStandardNode = AceType::DynamicCast<NavDestinationGroupNode>(container->GetChildAtIndex(index));
         }
         if (preStandardNode || !pattern->GetIsPreForceSetList()) {
@@ -185,6 +230,11 @@ void NavigationGroupNode::UpdateNavDestinationNodeWithoutMarkDirty(const RefPtr<
     preContentLastStandardIndex_ = contentLastStandardIndex_;
     preOverlayLastStandardIndex_ = overlayLastStandardIndex_;
     UpdateLastStandardIndex();
+    if (overlayStartIndex_ != -1 && !overlayNode) {
+        overlayNode = GetOrCreateOverlayNode();
+        CHECK_NULL_VOID(overlayNode);
+        hasChanged = true;
+    }
     TAG_LOGI(AceLogTag::ACE_NAVIGATION, "last standard page index is %{public}d", lastStandardIndex_);
     if (!ReorderNavDestination(navDestinationNodes, navigationContentNode, slot, overlaySlot, hasChanged)) {
         return;
@@ -206,14 +256,21 @@ void NavigationGroupNode::UpdateNavDestinationNodeWithoutMarkDirty(const RefPtr<
     }
     RemoveRedundantNavDestination(
         navigationContentNode, remainChild, static_cast<int32_t>(slot), hasChanged, preContentLastStandardNode);
-    RemoveRedundantNavDestination(
-        overlayNode, remainChild, static_cast<int32_t>(overlaySlot), hasChanged, preOverlayLastStandardNode);
+    if (overlayNode) {
+        RemoveRedundantNavDestination(
+            overlayNode, remainChild, static_cast<int32_t>(overlaySlot), hasChanged, preOverlayLastStandardNode);
+        hasChanged = UpdateOverlayNodeVisibility() || hasChanged;
+    }
     if (modeChange) {
         navigationContentNode->GetLayoutProperty()->UpdatePropertyChangeFlag(PROPERTY_UPDATE_MEASURE_SELF_AND_CHILD);
-        overlayNode->GetLayoutProperty()->UpdatePropertyChangeFlag(PROPERTY_UPDATE_MEASURE_SELF_AND_CHILD);
+        if (overlayNode) {
+            overlayNode->GetLayoutProperty()->UpdatePropertyChangeFlag(PROPERTY_UPDATE_MEASURE_SELF_AND_CHILD);
+        }
     } else if (hasChanged) {
         navigationContentNode->GetLayoutProperty()->UpdatePropertyChangeFlag(PROPERTY_UPDATE_MEASURE);
-        overlayNode->GetLayoutProperty()->UpdatePropertyChangeFlag(PROPERTY_UPDATE_MEASURE);
+        if (overlayNode) {
+            overlayNode->GetLayoutProperty()->UpdatePropertyChangeFlag(PROPERTY_UPDATE_MEASURE);
+        }
     }
     if (pattern->IsForceSplitSupported(context)) {
         pattern->BackupPrimaryNodes();
@@ -232,7 +289,6 @@ bool NavigationGroupNode::ReorderNavDestination(
     CHECK_NULL_RETURN(pattern, false);
     auto stack = pattern->GetNavigationStack();
     auto overlayNode = AceType::DynamicCast<FrameNode>(GetOverlayNode());
-    CHECK_NULL_RETURN(overlayNode, false);
     // The effective overlay state has already been calculated by UpdateLastStandardIndex().
     // Reorder uses that state to remount each destination into either the content tree or
     // the dedicated overlay tree, while preserving force-split proxy behavior for normal pages.

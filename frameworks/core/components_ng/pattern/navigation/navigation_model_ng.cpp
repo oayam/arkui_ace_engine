@@ -248,7 +248,6 @@ void NavigationModelNG::Create(bool useHomeDestination)
     if (!CreatePrimaryContentIfNeeded(navigationGroupNode) || // primaryContent node
         !CreateForceSplitPlaceHolderIfNeeded(navigationGroupNode) || // forcesplit placeHolder node
         !CreateContentNodeIfNeeded(navigationGroupNode) || // content node
-        !CreateOverlayNodeIfNeeded(navigationGroupNode) || // fullScreenOverlay node
         !CreateDividerNodeIfNeeded(navigationGroupNode)) { // divider node
         return;
     }
@@ -428,31 +427,6 @@ Color NavigationModelNG::GetDividerNodeColor(const RefPtr<NavigationGroupNode>& 
         }
     }
     return themeColor;
-}
-
-bool NavigationModelNG::CreateOverlayNodeIfNeeded(const RefPtr<NavigationGroupNode>& navigationGroupNode)
-{
-    if (!navigationGroupNode->GetOverlayNode()) {
-        // fullScreenOverlay pages cannot stay under NavigationContent because that subtree is
-        // measured as the right-side pane in split mode. Create a dedicated sibling container
-        // directly under Navigation so overlay pages can use the full component bounds.
-        int32_t overlayNodeId = ElementRegister::GetInstance()->MakeUniqueId();
-        ACE_LAYOUT_SCOPED_TRACE("Create[%s][self:%d]", V2::NAVIGATION_FULL_SCREEN_OVERLAY_ETS_TAG, overlayNodeId);
-        auto overlayNode = FrameNode::GetOrCreateFrameNode(V2::NAVIGATION_FULL_SCREEN_OVERLAY_ETS_TAG, overlayNodeId,
-            []() { return AceType::MakeRefPtr<NavigationContentPattern>(); });
-        overlayNode->GetLayoutProperty()->UpdateAlignment(Alignment::TOP_LEFT);
-        overlayNode->GetEventHub<EventHub>()->GetOrCreateGestureEventHub()->SetHitTestMode(
-            HitTestMode::HTMTRANSPARENT_SELF);
-        navigationGroupNode->AddChild(overlayNode);
-        navigationGroupNode->SetOverlayNode(overlayNode);
-    }
-    auto overlayNode = AceType::DynamicCast<FrameNode>(navigationGroupNode->GetOverlayNode());
-    CHECK_NULL_RETURN(overlayNode, false);
-    auto overlayRenderContext = overlayNode->GetRenderContext();
-    CHECK_NULL_RETURN(overlayRenderContext, false);
-    // Keep overlay pages above structural chrome such as the divider and drag bar.
-    overlayRenderContext->UpdateZIndex(NAVIGATION_OVERLAY_ZINDEX);
-    return true;
 }
 
 bool NavigationModelNG::CreateDividerNodeIfNeeded(const RefPtr<NavigationGroupNode>& navigationGroupNode)
@@ -2882,21 +2856,12 @@ RefPtr<FrameNode> NavigationModelNG::CreateFrameNode(int32_t nodeId)
         navigationGroupNode->SetContentNode(contentNode);
     }
 
-    if (!navigationGroupNode->GetOverlayNode()) {
-        int32_t overlayNodeId = ElementRegister::GetInstance()->MakeUniqueId();
-        auto overlayNode = FrameNode::GetOrCreateFrameNode(V2::NAVIGATION_FULL_SCREEN_OVERLAY_ETS_TAG, overlayNodeId,
-            []() { return AceType::MakeRefPtr<NavigationContentPattern>(); });
-        overlayNode->GetLayoutProperty()->UpdateAlignment(Alignment::TOP_LEFT);
-        overlayNode->GetEventHub<EventHub>()->GetOrCreateGestureEventHub()->SetHitTestMode(
-            HitTestMode::HTMTRANSPARENT_SELF);
-        navigationGroupNode->AddChild(overlayNode);
-        navigationGroupNode->SetOverlayNode(overlayNode);
-    }
     auto overlayNode = AceType::DynamicCast<FrameNode>(navigationGroupNode->GetOverlayNode());
-    CHECK_NULL_RETURN(overlayNode, nullptr);
-    auto overlayRenderContext = overlayNode->GetRenderContext();
-    CHECK_NULL_RETURN(overlayRenderContext, nullptr);
-    overlayRenderContext->UpdateZIndex(NAVIGATION_OVERLAY_ZINDEX);
+    if (overlayNode) {
+        auto overlayRenderContext = overlayNode->GetRenderContext();
+        CHECK_NULL_RETURN(overlayRenderContext, nullptr);
+        overlayRenderContext->UpdateZIndex(NAVIGATION_OVERLAY_ZINDEX);
+    }
 
     // divider node
     if (!navigationGroupNode->GetDividerNode()) {
