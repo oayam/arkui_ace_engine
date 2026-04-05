@@ -65,6 +65,16 @@ public:
         isEntry_ = isEntry;
     }
 
+    bool IsFullScreenOverlay() const
+    {
+        return fullScreenOverlay_;
+    }
+
+    void SetFullScreenOverlay(bool fullScreenOverlay)
+    {
+        fullScreenOverlay_ = fullScreenOverlay;
+    }
+
     virtual void UpdateNavPathInfo(const RefPtr<NG::NavPathInfo>& info)
     {
         if (!info) {
@@ -72,6 +82,7 @@ public:
         }
         name_ = info->GetName();
         isEntry_ = info->GetIsEntry();
+        fullScreenOverlay_ = info->IsFullScreenOverlay();
     }
 
     virtual std::shared_ptr<NavPathInfoScope> Scope()
@@ -87,6 +98,7 @@ public:
 protected:
     std::string name_;
     bool isEntry_ = false;
+    bool fullScreenOverlay_ = false;
 };
 
 class NavDestinationContext : public virtual AceType {

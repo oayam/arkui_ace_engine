@@ -45,6 +45,8 @@
 
 namespace OHOS::Ace::NG {
 namespace {
+constexpr int32_t NAVIGATION_OVERLAY_ZINDEX = 2;
+
 RefPtr<FrameNode> CreateBarItemTextNode(const std::string& text)
 {
     int32_t nodeId = ElementRegister::GetInstance()->MakeUniqueId();
@@ -322,6 +324,14 @@ RefPtr<FrameNode> NavigationModelStatic::CreateFrameNode(int32_t nodeId)
             HitTestMode::HTMTRANSPARENT_SELF);
         navigationGroupNode->AddChild(contentNode);
         navigationGroupNode->SetContentNode(contentNode);
+    }
+
+    auto overlayNode = AceType::DynamicCast<FrameNode>(navigationGroupNode->GetOverlayNode());
+    if (overlayNode) {
+        auto overlayRenderContext = overlayNode->GetRenderContext();
+        CHECK_NULL_RETURN(overlayRenderContext, nullptr);
+        // Keep overlay pages above structural chrome such as the divider and drag bar.
+        overlayRenderContext->UpdateZIndex(NAVIGATION_OVERLAY_ZINDEX);
     }
 
     // divider node

@@ -5536,6 +5536,8 @@ struct ArkUINavDestinationModifier {
     void (*resetNavDestinationHideToolBar)(ArkUINodeHandle node);
     void (*setNavDestinationHideBackButton)(ArkUINodeHandle node, ArkUI_Bool hideBackButton);
     void (*resetNavDestinationHideBackButton)(ArkUINodeHandle node);
+    void (*setFullScreenOverlay)(ArkUINodeHandle node, ArkUI_Bool fullScreenOverlay);
+    void (*resetFullScreenOverlay)(ArkUINodeHandle node);
     void (*setNavDestinationBackgroundColor)(ArkUINodeHandle node, ArkUI_Uint32 color, void* resRawPtr);
     void (*resetNavDestinationBackgroundColor)(ArkUINodeHandle node);
     void (*setNavDestinationBackgroundColorWithColorSpace)(
